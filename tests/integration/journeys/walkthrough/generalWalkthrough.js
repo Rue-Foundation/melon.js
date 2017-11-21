@@ -1,4 +1,4 @@
-// import BigNumber from "bignumber.js";
+import BigNumber from "bignumber.js";
 import ethers from "ethers";
 import fs from "fs";
 
@@ -26,6 +26,8 @@ import setup from "../../../../lib/utils/setup";
 import getVersionContract from "../../../../lib/version/contracts/getVersionContract";
 import encryptedWallet from "../../../../encryptedWallet.json";
 import password from "../../../../password";
+import findEventInLog from "../../../../lib/utils/findEventInLog";
+import "../../../../lib/utils/decodeReceipt";
 
 const INITIAL_SUBSCRIBE_QUANTITY = 20;
 const REDEEM_QUANTITY = 5;
@@ -54,7 +56,6 @@ fit(
     // trace({ message: `Etherbalance: Ξ${shared.etherBalance.initial} ` });
     // shared.melonBalance.initial = await getBalance("MLN-T");
     // trace({ message: `Melon Balance: Ⓜ  ${shared.melonBalance.initial} ` });
-
     const Wallet = ethers.Wallet;
     const jsonWallet = JSON.stringify(encryptedWallet);
     const wallet = await Wallet.fromEncryptedWallet(jsonWallet, password.kovan);
@@ -76,6 +77,10 @@ fit(
       estimateGas.toString(),
     );
 
+    const lastBlockNumber = await setup.provider.getBlockNumber();
+    console.log(lastBlockNumber);
+    console.log(await setup.provider.getBlock(lastBlockNumber));
+    return;
     const transaction = await versionContract.setupFund(
       "TEST",
       "0x2a20ff70596e431ab26C2365acab1b988DA8eCCF",
@@ -92,13 +97,24 @@ fit(
     const receipt = await setup.provider.getTransactionReceipt(
       transaction.hash,
     );
-    console.log("Receipt ", receipt);
+    console.log("Receipt ", JSON.stringify(receipt));
 
-    versionContract.onfundupdated = function(id) {
-      console.log("ID ", id);
-    };
+    const decoded = versionContract.decodeReceiptForEvent(
+      receipt,
+      "FundUpdated",
+    );
 
-    versionContract.onfundupdated();
+    // versionContract.onfundupdated = function(id) {
+    //   console.log("ID ", id);
+    // };
+
+    const searchEvent = findEventInLog("FundUpdated(uint256)", receipt);
+
+    console.log(searchEvent);
+    // const utils = ethers.utils;
+    // console.log("TOPIC ", receipt.logs[0].topics[0]);
+    // const utf8Bytes = utils.toUtf8Bytes("FundUpdated(uint256)");
+    // console.log(utils.keccak256(utf8Bytes));
 
     // / FAILED ATTEMPS
     // const Interface = ethers.Interface;
